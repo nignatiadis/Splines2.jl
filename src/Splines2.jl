@@ -38,7 +38,7 @@ end
 function SplineBasis(knots :: Array{T,1}, order :: Int = 4) where T<:Real
     SplineBasis(order,
                 length(knots),
-                length(knots)-order, 
+                length(knots)-order,
                 zeroArray(knots))
 end
 function BSplineBasis(boundary_knots :: Tuple{T,T},
@@ -110,7 +110,7 @@ function basis(bs :: SplineBasis{T}, x :: T, ders :: Int = 0) where T<:Real
             ind = ell + n
             xb = t[ind]
             xa = t[ind - j]
-            if (xb == xa) 
+            if (xb == xa)
                 result[n] = zero
                 continue
             end
@@ -156,21 +156,21 @@ function basis(bs :: BSplineBasis{T}, x :: T, ders :: Int = 0) where T<:Real
         if (ders==0)
             vec = basis(bs.spline_basis,k_pivot,0) +
                 basis(bs.spline_basis,k_pivot,1)*delta +
-                basis(bs.spline_basis,k_pivot,2)*delta*delta/T(2.0) + 
+                basis(bs.spline_basis,k_pivot,2)*delta*delta/T(2.0) +
                 basis(bs.spline_basis,k_pivot,3)*delta*delta*delta/T(6.0)
         elseif (ders==1)
             vec = splines.basis(bs.spline_basis,k_pivot,1) +
-                splines.basis(bs.spline_basis,k_pivot,2)*delta + 
+                splines.basis(bs.spline_basis,k_pivot,2)*delta +
                 splines.basis(bs.spline_basis,k_pivot,3)*delta*delta/T(2.0)
         elseif (ders==2)
-            vec = splines.basis(bs.spline_basis,k_pivot,2) + 
+            vec = splines.basis(bs.spline_basis,k_pivot,2) +
                 splines.basis(bs.spline_basis,k_pivot,3)*delta
         elseif (ders==3)
             vec = splines.basis(bs.spline_basis,k_pivot,3)
         else
             vec = k_pivot .* T(0)
         end
-    else 
+    else
         vec = basis(bs.spline_basis, x, ders)
     end
     if (!bs.intercept)
@@ -196,7 +196,7 @@ function basis(ns :: NSplineBasis{T}, x::T, ders :: Int = 0) where T<:Real
         else
             vec = ns.tr1.* T(0)
         end
-    else 
+    else
         vec = ns.qmat*basis(ns.b_spline_basis, x, ders)
     end
     vec
@@ -260,12 +260,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.bs_(collect(0.0:0.2:1.0), df=3)(collect(0.0:0.2:1.0))
 6×3 Array{Float64,2}:
- 0.0    0.0    0.0  
+ 0.0    0.0    0.0
  0.384  0.096  0.008
  0.432  0.288  0.064
  0.288  0.432  0.216
  0.096  0.384  0.512
- 0.0    0.0    1.0  
+ 0.0    0.0    1.0
 ```
 """
 function bs_(x :: Array{T,1};
@@ -281,23 +281,16 @@ function bs_(x :: Array{T,1};
                     order=order, intercept=intercept,
                     df=df, knots=knots)
     spline = BSplineBasis(boundary_knots, interior_knots, order, intercept)
-    function eval(x :: Array{T,1}; ders :: Int = 0)
-        b = basis(spline, x, ders)
-        if (centre != nothing && ders==0)
-            bc = basis(spline, centre, ders)
-            for i=1:size(b,1)
-                b[i,:] -= bc
-            end
-        end
-        b
-    end
-    eval
+    spline
 end
+
+
+
 
 """
     bs(x :: Array{T,1}; <keyword arguments>) where T<:Real
 
-Calculate a basis for B-splines. 
+Calculate a basis for B-splines.
 
 The keyword arguments include one of:
 1. `df`, possibly in combination with `intercept`
@@ -318,12 +311,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.bs(collect(0.0:0.2:1.0), df=3)
 6×3 Array{Float64,2}:
- 0.0    0.0    0.0  
+ 0.0    0.0    0.0
  0.384  0.096  0.008
  0.432  0.288  0.064
  0.288  0.432  0.216
  0.096  0.384  0.512
- 0.0    0.0    1.0  
+ 0.0    0.0    1.0
 ```
 """
 function bs(x :: Array{T,1}; ders :: Int = 0, kwargs...) where T<:Real
@@ -355,7 +348,7 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.ns_(collect(0.0:0.2:1.0), df=3)(collect(0.0:0.2:1.0))
 6×3 Array{Float64,2}:
-  0.0       0.0        0.0     
+  0.0       0.0        0.0
  -0.100444  0.409332  -0.272888
   0.102383  0.540852  -0.359235
   0.501759  0.386722  -0.172481
@@ -375,23 +368,25 @@ function ns_(x :: Array{T,1};
         spline_args(x, boundary_knots=boundary_knots, interior_knots=interior_knots,
                     order=order, intercept=intercept, df=df, knots=knots, knots_offset=2)
     spline = NSplineBasis(boundary_knots, interior_knots, order, intercept)
-    function eval(x :: Array{T,1}; ders :: Int = 0)
-        b = basis(spline, x, ders)
-        if (centre != nothing && ders==0)
-            bc = basis(spline, centre, ders)
-            for i=1:size(b,1)
-                b[i,:] -= bc
-            end
-        end
-        b
-    end
-    eval
+    spline
 end
+
+function (spline::Union{BSplineBasis, NSplineBasis})(x; ders :: Int = 0)
+    b = basis(spline, x, ders)
+    #if (centre != nothing && ders==0)
+    #    bc = basis(spline, centre, ders)
+    #    for i=1:size(b,1)
+    #        b[i,:] -= bc
+    #    end
+    #end
+    b
+end
+
 
 """
     ns(x :: Array{T,1}; <keyword arguments>) where T<:Real
 
-Calculate a basis for natural B-splines. 
+Calculate a basis for natural B-splines.
 
 The keyword arguments include one of:
 1. `df`, possibly in combination with `intercept`
@@ -412,7 +407,7 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.ns(collect(0.0:0.2:1.0), df=3)
 6×3 Array{Float64,2}:
-  0.0       0.0        0.0     
+  0.0       0.0        0.0
  -0.100444  0.409332  -0.272888
   0.102383  0.540852  -0.359235
   0.501759  0.386722  -0.172481
@@ -448,12 +443,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.is_(collect(0.0:0.2:1.0), df=3)(collect(0.0:0.2:1.0))
 6×3 Array{Float64,2}:
- 0.0     0.0     0.0   
+ 0.0     0.0     0.0
  0.1808  0.0272  0.0016
  0.5248  0.1792  0.0256
  0.8208  0.4752  0.1296
  0.9728  0.8192  0.4096
- 1.0     1.0     1.0   
+ 1.0     1.0     1.0
 ```
 """
 function is_(x :: Array{T,1};
@@ -497,7 +492,7 @@ end
 """
     is(x :: Array{T,1}; <keyword arguments>) where T<:Real
 
-Calculate a basis for I-splines. 
+Calculate a basis for I-splines.
 
 The keyword arguments include one of:
 1. `df`, possibly in combination with `intercept`
@@ -517,12 +512,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.is(collect(0.0:0.2:1.0), df=3)
 6×3 Array{Float64,2}:
- 0.0     0.0     0.0   
+ 0.0     0.0     0.0
  0.1808  0.0272  0.0016
  0.5248  0.1792  0.0256
  0.8208  0.4752  0.1296
  0.9728  0.8192  0.4096
- 1.0     1.0     1.0   
+ 1.0     1.0     1.0
 ```
 """
 function is(x :: Array{T,1}; ders :: Int = 0, kwargs...) where T<:Real
@@ -554,12 +549,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.ms_(collect(0.0:0.2:1.0), df=3)(collect(0.0:0.2:1.0))
 6×3 Array{Float64,2}:
- 0.0    0.0    0.0  
+ 0.0    0.0    0.0
  1.536  0.384  0.032
  1.728  1.152  0.256
  1.152  1.728  0.864
  0.384  1.536  2.048
- 0.0    0.0    4.0  
+ 0.0    0.0    4.0
 ```
 """
 function ms_(x :: Array{T,1};
@@ -592,7 +587,7 @@ function ms_(x :: Array{T,1};
             end
         end
         for i=1:size(b,1)
-            b[i,:] .*= transCoef 
+            b[i,:] .*= transCoef
         end
         b
     end
@@ -602,7 +597,7 @@ end
 """
     ms(x :: Array{T,1}; <keyword arguments>) where T<:Real
 
-Calculate a basis for M-splines. 
+Calculate a basis for M-splines.
 
 The keyword arguments include one of:
 1. `df`, possibly in combination with `intercept`
@@ -623,12 +618,12 @@ The keyword arguments include one of:
 ```jldoctest
 julia> Splines2.ms(collect(0.0:0.2:1.0), df=3)
 6×3 Array{Float64,2}:
- 0.0    0.0    0.0  
+ 0.0    0.0    0.0
  1.536  0.384  0.032
  1.728  1.152  0.256
  1.152  1.728  0.864
  0.384  1.536  2.048
- 0.0    0.0    4.0  
+ 0.0    0.0    4.0
 ```
 """
 function ms(x :: Array{T,1}; ders :: Int = 0, kwargs...) where T<:Real
